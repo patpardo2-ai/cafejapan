@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Cafe Japan">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Cafe Japan — Savings Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --ink: #0d0d0d;
+  --paper: #f5f0e8;
+  --paper2: #ede8dc;
+  --accent: #c8553d;
+  --green: #2d6a4f;
+  --green-light: #d8f3dc;
+  --muted: #7a7060;
+  --border: rgba(13,13,13,0.12);
+  --card: #ffffff;
+  --radius: 16px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { background: var(--ink); }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+.app { max-width: 430px; margin: 0 auto; padding: 0 0 calc(80px + var(--safe-bottom)); }
+
+/* ── Header ── */
+.header {
+  background: var(--ink);
+  padding: calc(28px + var(--safe-top)) 24px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '喫茶店';
+  position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+  font-family: 'Shippori Mincho', serif;
+  font-size: 64px; color: rgba(255,255,255,0.07);
+  letter-spacing: 2px; line-height: 1; pointer-events: none;
+}
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.header-title { font-family: 'Shippori Mincho', serif; font-size: 22px; font-weight: 600; color: var(--paper); line-height: 1.2; }
+.header-sub { font-size: 12px; color: rgba(245,240,232,0.45); margin-top: 3px; font-weight: 300; }
+.saldo-label { font-size: 11px; color: rgba(245,240,232,0.45); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+.saldo-main { font-family: 'Shippori Mincho', serif; font-size: 42px; font-weight: 600; color: #fff; letter-spacing: -1px; line-height: 1; }
+.prog-wrap { margin-top: 18px; background: rgba(255,255,255,0.1); border-radius: 99px; height: 6px; overflow: hidden; }
+.prog-bar { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+.prog-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: rgba(245,240,232,0.45); }
+
+/* ── Stats ── */
+.stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+.stat-cell { background: var(--paper); padding: 14px 16px; text-align: center; }
+.stat-val { font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 600; color: var(--ink); }
+.stat-val.accent { color: var(--accent); }
+.stat-val.green { color: var(--green); }
+.stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+
+/* ── Nav tabs ── */
+.nav {
+  display: flex; background: var(--paper); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.nav-btn {
+  flex: 1; height: 46px; border: none; background: transparent;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.nav-btn.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* ── Tabs content ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Section ── */
+.section { padding: 20px 16px 0; }
+.section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.section-line { flex: 1; height: 1px; background: var(--border); }
+.section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); white-space: nowrap; }
+
+/* ── Chart ── */
+.chart-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; margin-bottom: 12px; }
+.chart-wrap { position: relative; width: 100%; height: 240px; }
+.chart-legend { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+.chart-legend span { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+
+/* ── Milestones ── */
+.milestones { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; margin-bottom: 12px; }
+.milestone { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.milestone:last-child { border-bottom: none; }
+.milestone.done { background: rgba(45,106,79,0.04); }
+.ms-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-family: 'Shippori Mincho', serif; font-weight: 600; }
+.ms-circle.done { background: var(--green); color: #fff; }
+.ms-circle.pending { background: var(--paper2); color: var(--muted); }
+.ms-body { flex: 1; }
+.ms-name { font-size: 13px; font-weight: 500; }
+.ms-date { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.ms-amt { font-family: 'Shippori Mincho', serif; font-size: 14px; font-weight: 600; }
+
+/* ── Forms ── */
+.form-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 18px 16px; margin-bottom: 12px; }
+.field { margin-bottom: 12px; }
+.field:last-of-type { margin-bottom: 0; }
+.field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 5px; }
+.field input {
+  width: 100%; height: 48px; border: 1px solid var(--border); border-radius: 10px;
+  padding: 0 14px; font-size: 16px; font-family: 'DM Sans', sans-serif;
+  background: var(--paper); color: var(--ink); outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none; appearance: none;
+}
+.field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,85,61,0.12); background: #fff; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn { width: 100%; height: 52px; border-radius: 12px; border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 14px; transition: opacity 0.15s, transform 0.1s; letter-spacing: 0.2px; }
+.btn:active { opacity: 0.85; transform: scale(0.98); }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-ink { background: var(--ink); color: var(--paper); }
+
+/* ── Simulator ── */
+.sim-card { background: var(--ink); border-radius: var(--radius); padding: 18px 16px; margin-bottom: 12px; color: var(--paper); }
+.sim-title { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.sim-sub { font-size: 11px; color: rgba(245,240,232,0.45); margin-bottom: 16px; }
+.sim-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+.sim-tab { height: 36px; border-radius: 8px; border: 1px solid rgba(245,240,232,0.15); background: transparent; color: rgba(245,240,232,0.5); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.sim-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+.sim-field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: rgba(245,240,232,0.45); margin-bottom: 5px; }
+.sim-field input { width: 100%; height: 48px; border: 1px solid rgba(245,240,232,0.15); border-radius: 10px; padding: 0 14px; font-size: 16px; font-family: 'DM Sans', sans-serif; background: rgba(255,255,255,0.07); color: var(--paper); outline: none; margin-bottom: 10px; -webkit-appearance: none; }
+.sim-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,85,61,0.25); }
+.sim-field input::placeholder { color: rgba(245,240,232,0.25); }
+.sim-divider { height: 1px; background: rgba(245,240,232,0.08); margin: 14px 0; }
+.sim-scenario-label { font-size: 11px; color: rgba(245,240,232,0.35); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.sim-results { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.sim-result-box { background: rgba(255,255,255,0.07); border-radius: 12px; padding: 12px; border: 1px solid rgba(245,240,232,0.08); }
+.sim-result-box.hi-green { background: rgba(45,106,79,0.25); border-color: rgba(45,106,79,0.4); }
+.sim-result-box.hi-red { background: rgba(200,85,61,0.18); border-color: rgba(200,85,61,0.35); }
+.sim-rlabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(245,240,232,0.4); margin-bottom: 4px; }
+.sim-rval { font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 600; color: var(--paper); }
+.sim-rval.pos { color: #6fcf97; }
+.sim-rval.neg { color: #eb7b6b; }
+
+/* ── History ── */
+.history-list { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+.h-item { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--border); animation: fadeIn 0.3s ease; }
+.h-item:last-child { border-bottom: none; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.h-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.h-dot.extra { background: var(--green); }
+.h-dot.regular { background: var(--muted); }
+.h-body { flex: 1; }
+.h-mes { font-size: 13px; font-weight: 500; }
+.h-nota { font-size: 11px; color: var(--muted); }
+.h-right { text-align: right; }
+.h-amount { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 600; }
+.h-balance { font-size: 11px; color: var(--muted); }
+.badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 500; margin-top: 2px; }
+.badge.extra { background: var(--green-light); color: var(--green); }
+.badge.regular { background: var(--paper2); color: var(--muted); }
+.empty-state { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 13px; font-style: italic; }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: calc(24px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(120px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; transition: transform 0.35s cubic-bezier(.4,0,.2,1); z-index: 999; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Install banner ── */
+.install-banner { display: none; align-items: center; gap: 10px; background: var(--green); padding: 12px 16px; }
+.install-banner.visible { display: flex; }
+.install-banner p { flex: 1; font-size: 13px; color: #fff; font-weight: 500; }
+.install-banner p span { display: block; font-size: 11px; font-weight: 300; opacity: 0.8; margin-top: 1px; }
+.install-btn { background: #fff; color: var(--green); border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; white-space: nowrap; }
+.install-close { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- INSTALL BANNER -->
+  <div class="install-banner" id="install-banner">
+    <div>
+      <p>Add to your home screen<span>Use as a real app, offline too</span></p>
+    </div>
+    <button class="install-btn" id="install-btn">Install</button>
+    <button class="install-close" onclick="dismissInstall()" aria-label="Dismiss">×</button>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="saldo-label">Current savings</div>
+        <div class="saldo-main" id="hdr-saldo">£26,000</div>
+      </div>
+      <div style="font-size:20px;" title="Patricia & Louis">🇪🇸🇬🇧→🇯🇵</div>
+    </div>
+    <div class="header-title">Cafetería in Japan</div>
+    <div class="header-sub">Patricia & Louis · dream 2030</div>
+    <div class="prog-wrap">
+      <div class="prog-bar" id="hdr-prog" style="width:13%"></div>
+    </div>
+    <div class="prog-labels">
+      <span id="hdr-pct">13%</span>
+      <span id="hdr-obj">Goal: £200,000</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-cell">
+      <div class="stat-val accent" id="st-falta">£174k</div>
+      <div class="stat-lbl">Remaining</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val" id="st-fecha">2034</div>
+      <div class="stat-lbl">Target year</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val green" id="st-interes">£0</div>
+      <div class="stat-lbl">Interest earned</div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <button class="nav-btn active" onclick="switchTab('overview')" id="nav-overview">Overview</button>
+    <button class="nav-btn" onclick="switchTab('add')" id="nav-add">Add month</button>
+    <button class="nav-btn" onclick="switchTab('simulate')" id="nav-simulate">Simulate</button>
+    <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings">Settings</button>
+  </nav>
+
+  <!-- TAB: OVERVIEW -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="section">
+      <div class="section-head"><div class="section-title">Projection</div><div class="section-line"></div></div>
+      <div class="chart-card">
+        <div class="chart-wrap">
+          <canvas id="chart" role="img" aria-label="Savings projection chart towards the £200,000 goal">Monthly savings projection to reach the goal.</canvas>
+        </div>
+        <div class="chart-legend">
+          <span><span style="width:18px;height:2px;background:#0d0d0d;border-radius:2px;display:inline-block;"></span>Actual</span>
+          <span><span style="width:18px;height:0;border-top:1.5px dashed rgba(13,13,13,0.35);display:inline-block;"></span>Projected</span>
+          <span><span style="width:18px;height:0;border-top:2px dashed #c8553d;display:inline-block;"></span>Goal</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Milestones</div><div class="section-line"></div></div>
+      <div class="milestones" id="milestones"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">History</div><div class="section-line"></div></div>
+      <div class="history-list" id="historial" style="margin-bottom:20px;"></div>
+    </div>
+  </div>
+
+  <!-- TAB: ADD MONTH -->
+  <div class="tab-panel" id="tab-add">
+    <div class="section">
+      <div class="section-head"><div class="section-title">Record a month</div><div class="section-line"></div></div>
+      <div class="form-card">
+        <div class="field-row">
+          <div class="field">
+            <label>Amount saved (£)</label>
+            <input type="number" id="inp-aporte" placeholder="1600" min="0" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Month</label>
+            <input type="month" id="inp-mes">
+          </div>
+        </div>
+        <div class="field">
+          <label>Note (optional)</label>
+          <input type="text" id="inp-nota" placeholder="Extra savings this month...">
+        </div>
+        <button class="btn btn-accent" onclick="añadirAporte()">+ Add savings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SIMULATE -->
+  <div class="tab-panel" id="tab-simulate">
+    <div class="section">
+      <div class="section-head"><div class="section-title">What if...?</div><div class="section-line"></div></div>
+      <div class="sim-card">
+        <div class="sim-title">Hypothetical simulator</div>
+        <div class="sim-sub">Doesn't affect your real data</div>
+        <div class="sim-tabs">
+          <button class="sim-tab active" onclick="setSimMode('one')" id="tab-one">One-off extra</button>
+          <button class="sim-tab" onclick="setSimMode('monthly')" id="tab-monthly">Monthly extra</button>
+        </div>
+        <div id="sim-one-block">
+          <div class="sim-field">
+            <label>If I add this month (£)</label>
+            <input type="number" id="sim-aporte-extra" placeholder="500" min="0" oninput="calcSim()" inputmode="decimal">
+          </div>
+        </div>
+        <div id="sim-monthly-block" style="display:none;">
+          <div class="sim-field">
+            <label>If I add every month (£ extra)</label>
+            <input type="number" id="sim-mensual-extra" placeholder="400" min="0" oninput="calcSim()" inputmode="decimal">
+          </div>
+        </div>
+        <div class="sim-divider"></div>
+        <div class="sim-scenario-label">Now vs hypothetical</div>
+        <div class="sim-results">
+          <div class="sim-result-box">
+            <div class="sim-rlabel">Current balance</div>
+            <div class="sim-rval" id="sim-saldo-actual">—</div>
+          </div>
+          <div class="sim-result-box hi-green">
+            <div class="sim-rlabel">Hypothetical balance</div>
+            <div class="sim-rval pos" id="sim-saldo-hipo">—</div>
+          </div>
+          <div class="sim-result-box">
+            <div class="sim-rlabel">You'd reach goal in</div>
+            <div class="sim-rval" id="sim-fecha-actual">—</div>
+          </div>
+          <div class="sim-result-box hi-red">
+            <div class="sim-rlabel">Hypothetically in</div>
+            <div class="sim-rval" id="sim-fecha-hipo">—</div>
+          </div>
+          <div class="sim-result-box" style="grid-column:1/-1;">
+            <div class="sim-rlabel">Time difference</div>
+            <div class="sim-rval pos" id="sim-diferencia">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SETTINGS -->
+  <div class="tab-panel" id="tab-settings">
+    <div class="section">
+      <div class="section-head"><div class="section-title">Configuration</div><div class="section-line"></div></div>
+      <div class="form-card">
+        <div class="field-row">
+          <div class="field">
+            <label>Current balance (£)</label>
+            <input type="number" id="cfg-saldo" placeholder="26000" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Monthly saving (£)</label>
+            <input type="number" id="cfg-mensual" placeholder="1600" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Annual interest (%)</label>
+            <input type="number" id="cfg-interes" placeholder="3.5" step="0.1" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Goal (£)</label>
+            <input type="number" id="cfg-objetivo" placeholder="200000" inputmode="decimal">
+          </div>
+        </div>
+        <button class="btn btn-ink" onclick="guardarConfig()">Save settings</button>
+      </div>
+
+      <div class="section-head" style="margin-top:20px;"><div class="section-title">About</div><div class="section-line"></div></div>
+      <div class="form-card" style="text-align:center;">
+        <div style="font-family:'Shippori Mincho',serif;font-size:28px;margin-bottom:6px;">喫茶店</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+          Patricia & Louis<br>
+          Saving for their dream café in Japan<br>
+          <span style="font-size:11px;margin-top:8px;display:block;">Starting: May 2026 · Goal: £200,000</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'cafejapan_v2';
+function load() {
+  try { const r = localStorage.getItem(KEY); if (r) return JSON.parse(r); } catch(e){}
+  return { saldo: 26000, mensual: 1600, interes: 3.5, objetivo: 200000, aportaciones: [], interesAcum: 0, totalAportado: 26000 };
+}
+function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch(e){} }
+
+let D = load();
+let chart;
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function fmtFull(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+function fmt(n) {
+  const abs = Math.abs(Math.round(n));
+  if (abs >= 100000) return '£' + (abs/1000).toFixed(0) + 'k';
+  if (abs >= 10000) return '£' + (abs/1000).toFixed(1) + 'k';
+  if (abs >= 1000) return '£' + (abs/1000).toFixed(1) + 'k';
+  return '£' + abs.toLocaleString('en-GB');
+}
+
+function mesesHasta(saldo, mensual, tasa, objetivo) {
+  if (saldo >= objetivo) return 0;
+  const tm = tasa / 100 / 12;
+  let s = saldo, m = 0;
+  while (s < objetivo && m < 720) { s = s * (1 + tm) + mensual; m++; }
+  return m;
+}
+
+function addMonths(date, n) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
+function proyectarMensual(saldo, mensual, tasa, objetivo, aportaciones) {
+  const tm = tasa / 100 / 12;
+  const START_YEAR = 2026, START_MONTH = 4; // May 2026
+
+  const registrados = {};
+  (aportaciones || []).forEach(a => { registrados[a.mes] = a.saldoTras; });
+
+  const labels = [], tickLabels = [], reales = [], proyeccion = [];
+  let s = saldo, yr = START_YEAR, mo = START_MONTH;
+  const total = Math.min(mesesHasta(saldo, mensual, tasa, objetivo) + 4, 120);
+
+  // first point
+  const firstLabel = MONTHS[mo] + ' ' + yr;
+  labels.push(firstLabel);
+  tickLabels.push(firstLabel);
+  reales.push(saldo);
+  proyeccion.push(saldo);
+
+  for (let i = 1; i <= total; i++) {
+    mo++; if (mo > 11) { mo = 0; yr++; }
+    const lbl = MONTHS[mo] + ' ' + yr;
+    labels.push(lbl);
+    tickLabels.push(mo === 0 ? String(yr) : '');
+    s = s * (1 + tm) + mensual;
+    proyeccion.push(Math.round(s));
+
+    // Try to match real data
+    // Generate the Spanish month name used when saving
+    const esDate = new Date(yr, mo, 1);
+    const esKey = esDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    const enKey = lbl;
+    reales.push(registrados[esKey] !== undefined ? registrados[esKey] : (registrados[enKey] !== undefined ? registrados[enKey] : null));
+  }
+  return { labels, tickLabels, reales, proyeccion };
+}
+
+function actualizar() {
+  const { saldo, mensual, interes, objetivo, aportaciones, interesAcum } = D;
+  const pct = Math.min(100, (saldo / objetivo) * 100);
+  const falta = Math.max(0, objetivo - saldo);
+  const meses = mesesHasta(saldo, mensual, interes, objetivo);
+  const metaDate = addMonths(new Date(2026, 4, 1), meses);
+
+  document.getElementById('hdr-saldo').textContent = fmtFull(saldo);
+  document.getElementById('hdr-prog').style.width = pct.toFixed(1) + '%';
+  document.getElementById('hdr-pct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('hdr-obj').textContent = 'Goal: ' + fmtFull(objetivo);
+  document.getElementById('st-falta').textContent = fmtFull(falta);
+  document.getElementById('st-fecha').textContent = saldo >= objetivo ? 'Done!' : metaDate.getFullYear();
+  document.getElementById('st-interes').textContent = fmt(interesAcum || 0);
+
+  renderChart(saldo, mensual, interes, objetivo, aportaciones);
+  renderMilestones(saldo, objetivo, mensual, interes);
+  renderHistorial(aportaciones);
+  calcSim();
+}
+
+function renderChart(saldo, mensual, tasa, objetivo, aportaciones) {
+  const { labels, tickLabels, reales, proyeccion } = proyectarMensual(saldo, mensual, tasa, objetivo, aportaciones);
+  const goalLine = labels.map(() => objetivo);
+  const yMax = Math.ceil(objetivo * 1.1 / 10000) * 10000;
+
+  const canvas = document.getElementById('chart');
+  if (chart) chart.destroy();
+  chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: tickLabels,
+      datasets: [
+        {
+          label: 'Projected',
+          data: proyeccion,
+          borderColor: 'rgba(13,13,13,0.2)',
+          backgroundColor: 'rgba(13,13,13,0.04)',
+          fill: true, tension: 0.3,
+          pointRadius: 0, pointHoverRadius: 4,
+          borderWidth: 1.5, borderDash: [4,3]
+        },
+        {
+          label: 'Actual',
+          data: reales,
+          borderColor: '#0d0d0d',
+          backgroundColor: '#0d0d0d',
+          fill: false, tension: 0.3,
+          pointRadius: ctx => reales[ctx.dataIndex] !== null ? 5 : 0,
+          pointHoverRadius: 7,
+          pointBackgroundColor: ctx => {
+            const v = reales[ctx.dataIndex];
+            if (v === null) return 'transparent';
+            return v >= objetivo ? '#2d6a4f' : '#0d0d0d';
+          },
+          borderWidth: 2, spanGaps: false
+        },
+        {
+          label: 'Goal',
+          data: goalLine,
+          borderColor: '#c8553d', borderDash: [5,4],
+          borderWidth: 1.5, pointRadius: 0, fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => labels[ctx[0].dataIndex],
+            label: ctx => {
+              if (ctx.parsed.y === null) return null;
+              return ctx.dataset.label + ': ' + fmtFull(ctx.parsed.y);
+            }
+          },
+          backgroundColor: '#0d0d0d', titleColor: '#f5f0e8',
+          bodyColor: 'rgba(245,240,232,0.7)', padding: 10, cornerRadius: 8,
+          titleFont: { size: 12 }
+        }
+      },
+      scales: {
+        y: {
+          min: 0, max: yMax,
+          ticks: { callback: v => '£' + (v/1000).toFixed(0) + 'k', font: { size: 11 }, color: '#7a7060', maxTicksLimit: 6 },
+          grid: { color: 'rgba(13,13,13,0.06)' }, border: { display: false }
+        },
+        x: {
+          ticks: { font: { size: 11 }, color: '#7a7060', maxRotation: 0, autoSkip: false },
+          grid: { display: false }, border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+function renderMilestones(saldo, objetivo, mensual, interes) {
+  const items = [
+    { pct: 0.25, label: 'Quarter of the way' },
+    { pct: 0.50, label: 'Halfway there' },
+    { pct: 0.75, label: 'Three quarters done' },
+    { pct: 1.00, label: 'Goal reached — Japan!' }
+  ];
+  const nums = ['一','二','三','四'];
+  let html = '';
+  items.forEach((h, i) => {
+    const meta = objetivo * h.pct;
+    const done = saldo >= meta;
+    let dateStr = done ? 'Reached!' : (() => {
+      const m = mesesHasta(saldo, mensual, interes, meta);
+      return addMonths(new Date(2026, 4, 1), m).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    })();
+    html += `<div class="milestone${done ? ' done' : ''}">
+      <div class="ms-circle ${done ? 'done' : 'pending'}">${done ? '✓' : nums[i]}</div>
+      <div class="ms-body"><div class="ms-name">${h.label}</div><div class="ms-date">${dateStr}</div></div>
+      <div class="ms-amt">${fmtFull(meta)}</div>
+    </div>`;
+  });
+  document.getElementById('milestones').innerHTML = html;
+}
+
+function renderHistorial(aportaciones) {
+  if (!aportaciones.length) {
+    document.getElementById('historial').innerHTML = '<div class="empty-state">No entries yet — record your first month</div>';
+    return;
+  }
+  let html = '';
+  [...aportaciones].reverse().forEach(a => {
+    const extra = a.importe > D.mensual * 1.05;
+    html += `<div class="h-item">
+      <div class="h-dot ${extra ? 'extra' : 'regular'}"></div>
+      <div class="h-body">
+        <div class="h-mes">${a.mes}${a.nota ? ' · ' + a.nota : ''}</div>
+        <span class="badge ${extra ? 'extra' : 'regular'}">${extra ? 'Extra' : 'Regular'}</span>
+      </div>
+      <div class="h-right">
+        <div class="h-amount">+${fmtFull(a.importe)}</div>
+        <div class="h-balance">${fmtFull(a.saldoTras)}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('historial').innerHTML = html;
+}
+
+let simMode = 'one';
+function setSimMode(m) {
+  simMode = m;
+  document.getElementById('tab-one').className = 'sim-tab' + (m === 'one' ? ' active' : '');
+  document.getElementById('tab-monthly').className = 'sim-tab' + (m === 'monthly' ? ' active' : '');
+  document.getElementById('sim-one-block').style.display = m === 'one' ? '' : 'none';
+  document.getElementById('sim-monthly-block').style.display = m === 'monthly' ? '' : 'none';
+  calcSim();
+}
+
+function calcSim() {
+  const { saldo, mensual, interes, objetivo } = D;
+  const tm = interes / 100 / 12;
+  const mActual = mesesHasta(saldo, mensual, interes, objetivo);
+  const fActual = addMonths(new Date(2026, 4, 1), mActual);
+
+  document.getElementById('sim-saldo-actual').textContent = fmtFull(saldo);
+  document.getElementById('sim-fecha-actual').textContent = fActual.getFullYear() + ' (' + mActual + 'm)';
+
+  if (simMode === 'one') {
+    const extra = parseFloat(document.getElementById('sim-aporte-extra').value) || 0;
+    const sHipo = saldo * (1 + tm) + mensual + extra;
+    const mHipo = mesesHasta(sHipo, mensual, interes, objetivo);
+    const fHipo = addMonths(new Date(2026, 4, 1), mHipo);
+    const diff = mActual - mHipo - 1;
+    document.getElementById('sim-saldo-hipo').textContent = fmtFull(sHipo);
+    document.getElementById('sim-fecha-hipo').textContent = fHipo.getFullYear() + ' (' + mHipo + 'm)';
+    setDiff(diff);
+  } else {
+    const extra = parseFloat(document.getElementById('sim-mensual-extra').value) || 0;
+    const mHipo = mesesHasta(saldo, mensual + extra, interes, objetivo);
+    const fHipo = addMonths(new Date(2026, 4, 1), mHipo);
+    let s1y = saldo;
+    for (let i = 0; i < 12; i++) s1y = s1y * (1 + tm) + mensual + extra;
+    document.getElementById('sim-saldo-hipo').textContent = fmtFull(s1y) + '/yr';
+    document.getElementById('sim-fecha-hipo').textContent = fHipo.getFullYear() + ' (' + mHipo + 'm)';
+    setDiff(mActual - mHipo);
+  }
+}
+
+function setDiff(diff) {
+  const yr = Math.floor(Math.abs(diff) / 12);
+  const mo = Math.abs(diff) % 12;
+  let s = '';
+  if (yr > 0) s += yr + ' year' + (yr !== 1 ? 's' : '');
+  if (mo > 0) s += (s ? ' & ' : '') + mo + ' month' + (mo !== 1 ? 's' : '');
+  if (!s) s = 'No change';
+  else s += diff > 0 ? ' earlier' : ' later';
+  const el = document.getElementById('sim-diferencia');
+  el.textContent = s;
+  el.className = 'sim-rval ' + (diff > 0 ? 'pos' : diff < 0 ? 'neg' : '');
+}
+
+function añadirAporte() {
+  const importe = parseFloat(document.getElementById('inp-aporte').value);
+  const mes = document.getElementById('inp-mes').value;
+  const nota = document.getElementById('inp-nota').value.trim();
+  if (!importe || importe <= 0 || !mes) { toast('Please enter an amount and month'); return; }
+  const tm = D.interes / 100 / 12;
+  const interesMes = D.saldo * tm;
+  D.saldo = D.saldo * (1 + tm) + importe;
+  D.interesAcum = (D.interesAcum || 0) + interesMes;
+  D.totalAportado = (D.totalAportado || 0) + importe;
+  const label = new Date(mes + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  D.aportaciones.push({ mes: label, importe, interesMes: Math.round(interesMes), saldoTras: Math.round(D.saldo), nota });
+  save(D);
+  actualizar();
+  document.getElementById('inp-aporte').value = '';
+  document.getElementById('inp-nota').value = '';
+  toast('Entry saved ✓');
+  switchTab('overview');
+}
+
+function guardarConfig() {
+  const s = parseFloat(document.getElementById('cfg-saldo').value);
+  const m = parseFloat(document.getElementById('cfg-mensual').value);
+  const i = parseFloat(document.getElementById('cfg-interes').value);
+  const o = parseFloat(document.getElementById('cfg-objetivo').value);
+  if ([s,m,i,o].some(isNaN)) { toast('Please fill all fields'); return; }
+  D.saldo = s; D.mensual = m; D.interes = i; D.objetivo = o;
+  if (!D.totalAportado) D.totalAportado = s;
+  save(D);
+  actualizar();
+  ['cfg-saldo','cfg-mensual','cfg-interes','cfg-objetivo'].forEach(id => document.getElementById(id).value = '');
+  toast('Settings saved ✓');
+}
+
+function switchTab(name) {
+  ['overview','add','simulate','settings'].forEach(t => {
+    document.getElementById('tab-' + t).className = 'tab-panel' + (t === name ? ' active' : '');
+    document.getElementById('nav-' + t).className = 'nav-btn' + (t === name ? ' active' : '');
+  });
+  if (name === 'overview') { setTimeout(() => actualizar(), 50); }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── PWA install prompt ──
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const dismissed = localStorage.getItem('install_dismissed');
+  if (!dismissed) document.getElementById('install-banner').classList.add('visible');
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('visible');
+});
+function dismissInstall() {
+  document.getElementById('install-banner').classList.remove('visible');
+  localStorage.setItem('install_dismissed', '1');
+}
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ── Init ──
+document.getElementById('inp-mes').value = '2026-05';
+actualizar();
+</script>
+</body>
+</html>
