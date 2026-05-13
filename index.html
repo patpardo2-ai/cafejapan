@@ -236,7 +236,8 @@ body {
   <!-- NAV -->
   <nav class="nav">
     <button class="nav-btn active" onclick="switchTab('overview')" id="nav-overview">Overview</button>
-    <button class="nav-btn" onclick="switchTab('add')" id="nav-add">Add month</button>
+    <button class="nav-btn" onclick="switchTab('isa')" id="nav-isa">ISA</button>
+    <button class="nav-btn" onclick="switchTab('add')" id="nav-add">Add</button>
     <button class="nav-btn" onclick="switchTab('simulate')" id="nav-simulate">Simulate</button>
     <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings">Settings</button>
   </nav>
@@ -244,6 +245,39 @@ body {
   <!-- TAB: OVERVIEW -->
   <div class="tab-panel active" id="tab-overview">
     <div class="section">
+      <!-- Two account cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <!-- Revolut card -->
+        <div style="background:var(--card);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#0075ff;"></div>
+            <span style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Revolut</span>
+          </div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:600;" id="ov-revolut">£6,700</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">3.4% variable · +£<span id="ov-revolut-interest">0</span>/mo</div>
+        </div>
+        <!-- Nationwide card -->
+        <div style="background:var(--card);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px;" id="ov-nationwide-card">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);"></div>
+            <span style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Nationwide</span>
+          </div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:600;color:var(--green);" id="ov-nationwide">£20,000</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="ov-nationwide-sub">4.55% fixed · matures May 2028</div>
+        </div>
+      </div>
+      <!-- Total combined -->
+      <div style="background:var(--ink);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:10px;color:rgba(245,240,232,0.45);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Combined total</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:28px;font-weight:600;color:#fff;" id="ov-total">£26,700</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:rgba(245,240,232,0.45);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Remaining</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:18px;font-weight:600;color:var(--accent);" id="ov-remaining">£173,300</div>
+        </div>
+      </div>
+
       <div class="section-head"><div class="section-title">Projection</div><div class="section-line"></div></div>
       <div class="chart-card">
         <div class="chart-wrap">
@@ -268,6 +302,57 @@ body {
     </div>
   </div>
 
+
+  <!-- TAB: ISA -->
+  <div class="tab-panel" id="tab-isa">
+    <div class="section">
+      <div class="section-head"><div class="section-title">Nationwide ISA</div><div class="section-line"></div></div>
+
+      <!-- ISA summary card -->
+      <div class="form-card" style="margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div style="background:var(--paper);border-radius:10px;padding:12px;border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Deposited</div>
+            <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:600;" id="isa-deposited">£20,000</div>
+          </div>
+          <div style="background:var(--paper);border-radius:10px;padding:12px;border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Rate</div>
+            <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:600;color:var(--green);">4.55%</div>
+          </div>
+          <div style="background:var(--paper);border-radius:10px;padding:12px;border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">At maturity</div>
+            <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:600;color:var(--green);" id="isa-maturity-val">£21,861</div>
+          </div>
+          <div style="background:var(--paper);border-radius:10px;padding:12px;border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Interest earned</div>
+            <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:600;color:var(--green);" id="isa-interest-earned">£1,861</div>
+          </div>
+        </div>
+        <div id="isa-status-bar" style="background:var(--paper);border-radius:10px;padding:12px;border:0.5px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;font-weight:500;" id="isa-months-label">Month 0 of 24</span>
+            <span style="font-size:12px;color:var(--green);font-weight:500;" id="isa-matures-date">Matures May 2028</span>
+          </div>
+          <div style="background:var(--paper2);border-radius:99px;height:8px;overflow:hidden;">
+            <div id="isa-prog-bar" style="height:100%;border-radius:99px;background:var(--green);transition:width 0.5s;width:0%;"></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="isa-months-remaining">24 months remaining</div>
+        </div>
+      </div>
+
+      <!-- Monthly ISA breakdown -->
+      <div class="section-head" style="margin-top:4px;"><div class="section-title">Month by month</div><div class="section-line"></div></div>
+      <div style="background:var(--card);border-radius:var(--radius);border:0.5px solid var(--border);overflow:hidden;margin-bottom:20px;">
+        <div style="display:grid;grid-template-columns:80px 1fr 90px 80px;background:var(--paper2);border-bottom:0.5px solid var(--border);">
+          <div style="padding:8px 8px;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;">Month</div>
+          <div style="padding:8px 4px;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;">Progress</div>
+          <div style="padding:8px 8px;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;text-align:right;">Value</div>
+          <div style="padding:8px 8px;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;text-align:right;">+Interest</div>
+        </div>
+        <div id="isa-monthly-list"></div>
+      </div>
+    </div>
+  </div>
   <!-- TAB: ADD MONTH -->
   <div class="tab-panel" id="tab-add">
     <div class="section">
@@ -507,6 +592,22 @@ function actualizar() {
   renderMilestones(total, objetivo, mensual, interes);
   renderHistorial(aportaciones);
   calcSim();
+
+  // Overview cards
+  const revInterestMonth = Math.round((revolut || 0) * (interes / 100 / 12));
+  document.getElementById('ov-revolut').textContent = fmtFull(revolut || 0);
+  document.getElementById('ov-revolut-interest').textContent = revInterestMonth.toLocaleString('en-GB');
+  if (nationwideReleased) {
+    document.getElementById('ov-nationwide').textContent = 'Released ✓';
+    document.getElementById('ov-nationwide-sub').textContent = 'Added to Revolut May 2028';
+    document.getElementById('ov-nationwide-card').style.opacity = '0.6';
+  } else {
+    document.getElementById('ov-nationwide').textContent = fmtFull(nationwide || 20000);
+    document.getElementById('ov-nationwide-sub').textContent = '4.55% fixed · matures May 2028';
+    document.getElementById('ov-nationwide-card').style.opacity = '1';
+  }
+  document.getElementById('ov-total').textContent = fmtFull(total);
+  document.getElementById('ov-remaining').textContent = fmtFull(Math.max(0, objetivo - total));
 }
 
 function renderChart(saldo, mensual, tasa, objetivo, aportaciones, nationwide, nationwideReleased) {
@@ -747,11 +848,12 @@ function guardarConfig() {
 }
 
 function switchTab(name) {
-  ['overview','add','simulate','settings'].forEach(t => {
+  ['overview','isa','add','simulate','settings'].forEach(t => {
     document.getElementById('tab-' + t).className = 'tab-panel' + (t === name ? ' active' : '');
     document.getElementById('nav-' + t).className = 'nav-btn' + (t === name ? ' active' : '');
   });
   if (name === 'overview') { setTimeout(() => actualizar(), 50); }
+  if (name === 'isa') { setTimeout(() => renderISA(), 50); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -790,6 +892,7 @@ if ('serviceWorker' in navigator) {
 // ── Init ──
 document.getElementById('inp-mes').value = '2026-06';
 actualizar();
+renderISA();
 </script>
 </body>
 </html>
