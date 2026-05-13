@@ -201,13 +201,13 @@ body {
   <div class="header">
     <div class="header-top">
       <div>
-        <div class="saldo-label">Current savings</div>
+        <div class="saldo-label">Total savings</div>
         <div class="saldo-main" id="hdr-saldo">£26,000</div>
       </div>
       <div style="font-size:20px;" title="Patricia & Louis">🇪🇸🇬🇧→🇯🇵</div>
     </div>
     <div class="header-title">Cafetería in Japan</div>
-    <div class="header-sub">Patricia & Louis · dream 2030</div>
+    <div class="header-sub">Patricia & Louis · Revolut + Nationwide ISA</div>
     <div class="prog-wrap">
       <div class="prog-bar" id="hdr-prog" style="width:13%"></div>
     </div>
@@ -228,8 +228,8 @@ body {
       <div class="stat-lbl">Target year</div>
     </div>
     <div class="stat-cell">
-      <div class="stat-val green" id="st-interes">£0</div>
-      <div class="stat-lbl">Interest earned</div>
+      <div class="stat-val" id="st-nationwide">£20,000</div>
+      <div class="stat-lbl">Nationwide ISA</div>
     </div>
   </div>
 
@@ -348,10 +348,11 @@ body {
     <div class="section">
       <div class="section-head"><div class="section-title">Configuration</div><div class="section-line"></div></div>
       <div class="form-card">
+        <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Revolut Account</div>
         <div class="field-row">
           <div class="field">
-            <label>Current balance (£)</label>
-            <input type="number" id="cfg-saldo" placeholder="26000" inputmode="decimal">
+            <label>Revolut balance (£)</label>
+            <input type="number" id="cfg-saldo" placeholder="6700" inputmode="decimal">
           </div>
           <div class="field">
             <label>Monthly saving (£)</label>
@@ -360,12 +361,23 @@ body {
         </div>
         <div class="field-row">
           <div class="field">
-            <label>Annual interest (%)</label>
-            <input type="number" id="cfg-interes" placeholder="3.5" step="0.1" inputmode="decimal">
+            <label>Interest rate (%)</label>
+            <input type="number" id="cfg-interes" placeholder="3.4" step="0.1" inputmode="decimal">
           </div>
           <div class="field">
             <label>Goal (£)</label>
             <input type="number" id="cfg-objetivo" placeholder="200000" inputmode="decimal">
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:14px 0 10px;">Nationwide ISA</div>
+        <div class="field-row">
+          <div class="field">
+            <label>ISA balance (£)</label>
+            <input type="number" id="cfg-nationwide" placeholder="20000" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Matures</label>
+            <input type="text" value="May 2028 · 4.55%" style="background:var(--paper2);color:var(--muted);" readonly>
           </div>
         </div>
         <button class="btn btn-ink" onclick="guardarConfig()">Save settings</button>
@@ -377,7 +389,7 @@ body {
         <div style="font-size:13px;color:var(--muted);line-height:1.6;">
           Patricia & Louis<br>
           Saving for their dream café in Japan<br>
-          <span style="font-size:11px;margin-top:8px;display:block;">Starting: May 2026 · Goal: £200,000</span>
+          <span style="font-size:11px;margin-top:8px;display:block;">Revolut £6,700 @ 3.4% + Nationwide ISA £20,000 @ 4.55%</span>
         </div>
       </div>
     </div>
@@ -388,10 +400,17 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
-const KEY = 'cafejapan_v2';
+const KEY = 'cafejapan_v3';
 function load() {
   try { const r = localStorage.getItem(KEY); if (r) return JSON.parse(r); } catch(e){}
-  return { saldo: 26000, mensual: 1600, interes: 3.5, objetivo: 200000, aportaciones: [], interesAcum: 0, totalAportado: 26000 };
+  return {
+    // Revolut
+    revolut: 6700, mensual: 1600, interes: 3.4, objetivo: 200000,
+    aportaciones: [], interesAcum: 0, totalAportado: 6700,
+    // Nationwide ISA
+    nationwide: 20000, nationwideRate: 4.55, nationwideMature: '2028-05',
+    nationwideReleased: false, nationwideInterest: 0
+  };
 }
 function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch(e){} }
 
@@ -426,7 +445,7 @@ function addMonths(date, n) {
 
 function proyectarMensual(saldo, mensual, tasa, objetivo, aportaciones) {
   const tm = tasa / 100 / 12;
-  const START_YEAR = 2026, START_MONTH = 4; // May 2026
+  const START_YEAR = 2026, START_MONTH = 5; // June 2026
 
   const registrados = {};
   (aportaciones || []).forEach(a => { registrados[a.mes] = a.saldoTras; });
@@ -460,28 +479,37 @@ function proyectarMensual(saldo, mensual, tasa, objetivo, aportaciones) {
   return { labels, tickLabels, reales, proyeccion };
 }
 
-function actualizar() {
-  const { saldo, mensual, interes, objetivo, aportaciones, interesAcum } = D;
-  const pct = Math.min(100, (saldo / objetivo) * 100);
-  const falta = Math.max(0, objetivo - saldo);
-  const meses = mesesHasta(saldo, mensual, interes, objetivo);
-  const metaDate = addMonths(new Date(2026, 4, 1), meses);
+function getTotalSaldo() {
+  const nw = D.nationwideReleased ? 0 : (D.nationwide || 0);
+  return (D.revolut || 0) + nw;
+}
 
-  document.getElementById('hdr-saldo').textContent = fmtFull(saldo);
+function actualizar() {
+  const { revolut, mensual, interes, objetivo, aportaciones, interesAcum, nationwide, nationwideReleased } = D;
+  const total = getTotalSaldo();
+  const pct = Math.min(100, (total / objetivo) * 100);
+  const falta = Math.max(0, objetivo - total);
+
+  // Estimate months to goal combining both accounts
+  const nwFutureBoost = nationwideReleased ? 0 : Math.round((nationwide || 20000) * Math.pow(1 + 0.0455, 2));
+  const meses = mesesHasta(revolut, mensual, interes, objetivo - (nationwideReleased ? 0 : nwFutureBoost));
+  const metaDate = addMonths(new Date(2026, 5, 1), meses);
+
+  document.getElementById('hdr-saldo').textContent = fmtFull(total);
   document.getElementById('hdr-prog').style.width = pct.toFixed(1) + '%';
   document.getElementById('hdr-pct').textContent = pct.toFixed(1) + '%';
   document.getElementById('hdr-obj').textContent = 'Goal: ' + fmtFull(objetivo);
   document.getElementById('st-falta').textContent = fmtFull(falta);
-  document.getElementById('st-fecha').textContent = saldo >= objetivo ? 'Done!' : metaDate.getFullYear();
-  document.getElementById('st-interes').textContent = fmt(interesAcum || 0);
+  document.getElementById('st-fecha').textContent = total >= objetivo ? 'Done!' : metaDate.getFullYear();
+  document.getElementById('st-nationwide').textContent = nationwideReleased ? 'Released ✓' : fmt(nationwide || 20000);
 
-  renderChart(saldo, mensual, interes, objetivo, aportaciones);
-  renderMilestones(saldo, objetivo, mensual, interes);
+  renderChart(revolut, mensual, interes, objetivo, aportaciones, nationwide, nationwideReleased);
+  renderMilestones(total, objetivo, mensual, interes);
   renderHistorial(aportaciones);
   calcSim();
 }
 
-function renderChart(saldo, mensual, tasa, objetivo, aportaciones) {
+function renderChart(saldo, mensual, tasa, objetivo, aportaciones, nationwide, nationwideReleased) {
   const { labels, tickLabels, reales, proyeccion } = proyectarMensual(saldo, mensual, tasa, objetivo, aportaciones);
   const goalLine = labels.map(() => objetivo);
   const yMax = Math.ceil(objetivo * 1.1 / 10000) * 10000;
@@ -522,6 +550,18 @@ function renderChart(saldo, mensual, tasa, objetivo, aportaciones) {
           data: goalLine,
           borderColor: '#c8553d', borderDash: [5,4],
           borderWidth: 1.5, pointRadius: 0, fill: false
+        },
+        {
+          label: 'Nationwide matures',
+          data: labels.map((_, i) => {
+            const mo = (4 + i) % 12; // May 2026 + i months
+            const yr = 2026 + Math.floor((4 + i) / 12);
+            return (!nationwideReleased && yr === 2028 && mo === 4) ? (saldo + Math.round((nationwide||20000) * Math.pow(1.0455,2))) : null;
+          }),
+          borderColor: '#185FA5',
+          backgroundColor: '#185FA5',
+          pointRadius: 8, pointStyle: 'star',
+          pointHoverRadius: 10, fill: false, showLine: false
         }
       ]
     },
@@ -572,7 +612,7 @@ function renderMilestones(saldo, objetivo, mensual, interes) {
     const done = saldo >= meta;
     let dateStr = done ? 'Reached!' : (() => {
       const m = mesesHasta(saldo, mensual, interes, meta);
-      return addMonths(new Date(2026, 4, 1), m).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      return addMonths(new Date(2026, 5, 1), m).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
     })();
     html += `<div class="milestone${done ? ' done' : ''}">
       <div class="ms-circle ${done ? 'done' : 'pending'}">${done ? '✓' : nums[i]}</div>
@@ -617,7 +657,7 @@ function setSimMode(m) {
 }
 
 function calcSim() {
-  const { saldo, mensual, interes, objetivo } = D;
+  const { revolut, mensual, interes, objetivo } = D; const saldo = revolut || 0;
   const tm = interes / 100 / 12;
   const mActual = mesesHasta(saldo, mensual, interes, objetivo);
   const fActual = addMonths(new Date(2026, 4, 1), mActual);
@@ -665,12 +705,23 @@ function añadirAporte() {
   const nota = document.getElementById('inp-nota').value.trim();
   if (!importe || importe <= 0 || !mes) { toast('Please enter an amount and month'); return; }
   const tm = D.interes / 100 / 12;
-  const interesMes = D.saldo * tm;
-  D.saldo = D.saldo * (1 + tm) + importe;
+  const interesMes = (D.revolut || 0) * tm;
+  // Check if this is May 2028 — Nationwide maturity
+  if (mes === '2028-05' && !D.nationwideReleased) {
+    const matured = Math.round((D.nationwide || 20000) * Math.pow(1.0455, 2));
+    D.nationwideInterest = matured - (D.nationwide || 20000);
+    D.revolut = (D.revolut || 0) + matured;
+    D.nationwideReleased = true;
+    D.nationwide = 0;
+    toast('Nationwide ISA matured! £' + matured.toLocaleString('en-GB') + ' added ✓');
+  }
+  D.revolut = (D.revolut || 0) * (1 + tm) + importe;
   D.interesAcum = (D.interesAcum || 0) + interesMes;
   D.totalAportado = (D.totalAportado || 0) + importe;
+  // keep saldo in sync for legacy compatibility
+  D.saldo = D.revolut;
   const label = new Date(mes + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  D.aportaciones.push({ mes: label, importe, interesMes: Math.round(interesMes), saldoTras: Math.round(D.saldo), nota });
+  D.aportaciones.push({ mes: label, importe, interesMes: Math.round(interesMes), saldoTras: Math.round(D.revolut || 0), nota });
   save(D);
   actualizar();
   document.getElementById('inp-aporte').value = '';
@@ -684,8 +735,10 @@ function guardarConfig() {
   const m = parseFloat(document.getElementById('cfg-mensual').value);
   const i = parseFloat(document.getElementById('cfg-interes').value);
   const o = parseFloat(document.getElementById('cfg-objetivo').value);
+  const nw = parseFloat(document.getElementById('cfg-nationwide').value);
   if ([s,m,i,o].some(isNaN)) { toast('Please fill all fields'); return; }
-  D.saldo = s; D.mensual = m; D.interes = i; D.objetivo = o;
+  D.revolut = s; D.saldo = s; D.mensual = m; D.interes = i; D.objetivo = o;
+  if (!isNaN(nw)) D.nationwide = nw;
   if (!D.totalAportado) D.totalAportado = s;
   save(D);
   actualizar();
@@ -735,7 +788,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── Init ──
-document.getElementById('inp-mes').value = '2026-05';
+document.getElementById('inp-mes').value = '2026-06';
 actualizar();
 </script>
 </body>
